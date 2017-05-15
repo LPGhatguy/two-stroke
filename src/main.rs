@@ -25,7 +25,7 @@ pub type DepthFormat = gfx::format::DepthStencil;
 
 gfx_defines! {
 	constant Locals {
-		transform: [[f32; 4]; 4] = "u_Transform",
+		model_view: [[f32; 4]; 4] = "u_ModelView",
 	}
 
 	pipeline pipe {
@@ -34,7 +34,7 @@ gfx_defines! {
 		out_depth: gfx::DepthTarget<DepthFormat> = gfx::preset::depth::LESS_EQUAL_WRITE,
 		locals: gfx::ConstantBuffer<Locals> = "Locals",
 
-		transform: gfx::Global<[[f32; 4]; 4]> = "u_Transform",
+		model_view: gfx::Global<[[f32; 4]; 4]> = "u_ModelView",
 	}
 }
 
@@ -70,15 +70,18 @@ fn main() {
 	let mut state = State::new();
 	let mesh = Mesh::cube(&mut factory);
 
-	let view = Matrix4::<f32>::from(Quaternion::<f32>::one());
-	let view = view * Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
+	let model_view = Matrix4::<f32>::from(Quaternion::<f32>::one());
+	let model_view = model_view * Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
+
+	println!("model_view: {:?}", model_view);
 
 	let data = pipe::Data {
 		vbuf: mesh.vertex_buffer.clone(),
 		out_color: main_color.clone(),
 		out_depth: main_depth.clone(),
 		locals: factory.create_constant_buffer(1),
-		transform: view.into()
+
+		model_view: model_view.into()
 	};
 
 	while state.running {
