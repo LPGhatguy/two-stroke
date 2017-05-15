@@ -12,7 +12,6 @@ mod state;
 mod input_state;
 
 use gfx::traits::FactoryExt;
-use gfx::IntoIndexBuffer;
 use gfx::Device;
 
 use cgmath::{Vector3, Matrix4, Quaternion};
@@ -87,8 +86,7 @@ fn main() {
 			match event {
 				glutin::Event::WindowEvent { event, .. } => {
 					handle_event(&mut state, event);
-				},
-				_ => ()
+				}
 			}
 		});
 
