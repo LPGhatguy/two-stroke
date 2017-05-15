@@ -4,6 +4,7 @@ extern crate gfx;
 extern crate gfx_device_gl;
 extern crate gfx_window_glutin;
 extern crate glutin;
+extern crate time;
 
 mod gfx_types;
 mod vertex;
@@ -11,11 +12,12 @@ mod mesh;
 mod state;
 mod input_state;
 
+use time::precise_time_s;
+
 use gfx::traits::FactoryExt;
 use gfx::Device;
 
-use cgmath::{Vector3, Matrix4, Quaternion, Deg};
-use cgmath::One;
+use cgmath::{Vector3, Matrix4, Deg};
 
 use state::State;
 use mesh::Mesh;
@@ -69,10 +71,6 @@ fn main() {
 	let mut state = State::new();
 	let mesh = Mesh::cube(&mut factory);
 
-	let mut step = 0.0f32;
-
-	let model_view = Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
-
 	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
 
 	let data = pipe::Data {
@@ -82,10 +80,18 @@ fn main() {
 		locals: factory.create_constant_buffer(2)
 	};
 
-	while state.running {
-		step += 0.01;
+	let start = precise_time_s();
+	let mut last_time = start;
+	let mut total_time = 0.0f32;
 
-		let model_view = Matrix4::from_translation(Vector3::new(step.cos(), step.sin(), -2.0));
+	while state.running {
+		let now = precise_time_s();
+		let delta = now - last_time;
+		last_time = now;
+
+		total_time += delta as f32;
+
+		let model_view = Matrix4::from_translation(Vector3::new(total_time.cos(), total_time.sin(), -2.0));
 
 		events_loop.poll_events(|event| {
 			match event {
