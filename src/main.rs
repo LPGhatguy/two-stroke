@@ -14,7 +14,7 @@ mod input_state;
 use gfx::traits::FactoryExt;
 use gfx::Device;
 
-use cgmath::{Vector3, Matrix4, Quaternion};
+use cgmath::{Vector3, Matrix4, Quaternion, Deg};
 use cgmath::One;
 
 use state::State;
@@ -26,6 +26,7 @@ pub type DepthFormat = gfx::format::DepthStencil;
 gfx_defines! {
 	constant Locals {
 		model_view: [[f32; 4]; 4] = "u_ModelView",
+		projection: [[f32; 4]; 4] = "u_Projection",
 	}
 
 	pipeline pipe {
@@ -33,8 +34,6 @@ gfx_defines! {
 		out_color: gfx::RenderTarget<ColorFormat> = "Target0",
 		out_depth: gfx::DepthTarget<DepthFormat> = gfx::preset::depth::LESS_EQUAL_WRITE,
 		locals: gfx::ConstantBuffer<Locals> = "Locals",
-
-		model_view: gfx::Global<[[f32; 4]; 4]> = "u_ModelView",
 	}
 }
 
@@ -53,7 +52,7 @@ fn main() {
 	let events_loop = glutin::EventsLoop::new();
 	let builder = glutin::WindowBuilder::new()
 		.with_title("Triangle example".to_string())
-		.with_dimensions(1024, 768)
+		.with_dimensions(1280, 720)
 		.with_vsync();
 
 	let (window, mut device, mut factory, main_color, main_depth) =
@@ -70,21 +69,24 @@ fn main() {
 	let mut state = State::new();
 	let mesh = Mesh::cube(&mut factory);
 
-	let model_view = Matrix4::<f32>::from(Quaternion::<f32>::one());
-	let model_view = model_view * Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
+	let mut step = 0.0f32;
 
-	println!("model_view: {:?}", model_view);
+	let model_view = Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
+
+	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
 
 	let data = pipe::Data {
 		vbuf: mesh.vertex_buffer.clone(),
 		out_color: main_color.clone(),
 		out_depth: main_depth.clone(),
-		locals: factory.create_constant_buffer(1),
-
-		model_view: model_view.into()
+		locals: factory.create_constant_buffer(2)
 	};
 
 	while state.running {
+		step += 0.01;
+
+		let model_view = Matrix4::from_translation(Vector3::new(step.cos(), step.sin(), -2.0));
+
 		events_loop.poll_events(|event| {
 			match event {
 				glutin::Event::WindowEvent { event, .. } => {
@@ -92,6 +94,14 @@ fn main() {
 				}
 			}
 		});
+
+		{
+			let locals = Locals {
+				model_view: model_view.into(),
+				projection: projection.into()
+			};
+			encoder.update_constant_buffer(&data.locals, &locals);
+		}
 
 		encoder.clear(&main_color, CLEAR_COLOR);
 		encoder.clear_depth(&main_depth, 1.0);
