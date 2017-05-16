@@ -10,14 +10,14 @@ mod gfx_types;
 mod vertex;
 mod mesh;
 mod state;
-mod input_state;
 
 use time::precise_time_s;
 
 use gfx::traits::FactoryExt;
 use gfx::Device;
 
-use cgmath::{Vector3, Matrix4, Deg};
+use cgmath::prelude::*;
+use cgmath::{Vector2, Vector3, Point3, Matrix4, Deg};
 
 use state::State;
 use mesh::Mesh;
@@ -46,7 +46,51 @@ fn handle_event(state: &mut State, event: glutin::WindowEvent) {
 		glutin::WindowEvent::Closed | glutin::WindowEvent::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape), _) => {
 			state.running = false;
 		},
+		glutin::WindowEvent::KeyboardInput(key_state, _, Some(keycode), _) => {
+			match key_state {
+				glutin::ElementState::Pressed => {
+					state.input.down.insert(keycode);
+				},
+				glutin::ElementState::Released => {
+					state.input.down.remove(&keycode);
+				}
+			}
+		},
 		_ => ()
+	}
+}
+
+fn handle_update(state: &mut State) {
+	let now = precise_time_s();
+	let delta_full = now - state.last_update_time;
+	let delta = delta_full as f32;
+
+	state.total_time += delta_full;
+	state.last_update_time = now;
+
+	let mut change = Vector3::zero();
+
+	if state.input.down.contains(&glutin::VirtualKeyCode::D) {
+		change.x = 1.0;
+	} else if state.input.down.contains(&glutin::VirtualKeyCode::A) {
+		change.x = -1.0;
+	}
+
+	if state.input.down.contains(&glutin::VirtualKeyCode::W) {
+		change.z = -1.0;
+	} else if state.input.down.contains(&glutin::VirtualKeyCode::S) {
+		change.z = 1.0;
+	}
+
+	if state.input.down.contains(&glutin::VirtualKeyCode::E) {
+		change.y = 1.0;
+	} else if state.input.down.contains(&glutin::VirtualKeyCode::Q) {
+		change.y = -1.0;
+	}
+
+	if !change.is_zero() {
+		change = change.normalize_to(delta * 3.0);
+		state.player.camera_position += change;
 	}
 }
 
@@ -80,18 +124,8 @@ fn main() {
 		locals: factory.create_constant_buffer(2)
 	};
 
-	let start = precise_time_s();
-	let mut last_time = start;
-	let mut total_time = 0.0f32;
-
 	while state.running {
-		let now = precise_time_s();
-		let delta = now - last_time;
-		last_time = now;
-
-		total_time += delta as f32;
-
-		let model_view = Matrix4::from_translation(Vector3::new(total_time.cos(), total_time.sin(), -2.0));
+		handle_update(&mut state);
 
 		events_loop.poll_events(|event| {
 			match event {
@@ -102,6 +136,9 @@ fn main() {
 		});
 
 		{
+			println!("{:?}", state.player.camera_position);
+			let model_view = Matrix4::from_translation(-state.player.camera_position);
+			let model_view = Matrix4::look_at(Point3::from_vec(state.player.camera_position), Point3::origin(), Vector3::unit_y()) * model_view;
 			let locals = Locals {
 				model_view: model_view.into(),
 				projection: projection.into()
