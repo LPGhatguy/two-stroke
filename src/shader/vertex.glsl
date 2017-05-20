@@ -1,12 +1,12 @@
 #version 330
 
-layout (location = 0) in vec3 a_Pos;
-layout (location = 1) in vec3 a_Color;
-
 uniform Locals {
 	mat4 u_ModelView;
 	mat4 u_Projection;
 };
+
+in vec3 a_Pos;
+in vec3 a_Color;
 
 out vec4 v_Color;
 

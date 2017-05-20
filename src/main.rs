@@ -17,6 +17,7 @@ use time::precise_time_s;
 
 use gfx::traits::FactoryExt;
 use gfx::Device;
+use gfx::state::{Rasterizer, RasterMethod, FrontFace, CullFace};
 
 use cgmath::prelude::*;
 use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
@@ -159,20 +160,43 @@ fn main() {
 
 	let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
-	let pso = factory.create_pipeline_simple(
-		include_bytes!("shader/vertex.glsl"),
-		include_bytes!("shader/fragment.glsl"),
+	let shader_set = {
+		use gfx::Factory;
+
+		let vs_code = include_bytes!("shader/vertex.glsl");
+		let ps_code = include_bytes!("shader/fragment.glsl");
+
+		gfx::ShaderSet::Simple(
+			factory.create_shader_vertex(vs_code).expect("Failed to compile vertex shader"),
+			factory.create_shader_pixel(ps_code).expect("Failed to compile pixel shader"),
+		)
+	};
+
+	let pso = factory.create_pipeline_state(
+		&shader_set,
+		gfx::Primitive::TriangleList,
+		Rasterizer {
+			front_face: FrontFace::CounterClockwise,
+			cull_face: CullFace::Back,
+			method: RasterMethod::Line(8),
+			offset: None,
+			samples: None,
+		},
 		pipe::new()
 	).unwrap();
 
 	let mut state = State::new();
 	state.player.camera_position = Vector3::new(0.0, 0.0, 3.0);
 
-	let mesh = Mesh::cube(&mut factory);
+	let mut plane = Mesh::plane(&mut factory);
+	plane.transform = Matrix4::from_scale(5.0);
+
+	let mut mesh = Mesh::cube(&mut factory);
+	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 2.0, 0.0));
 
 	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
 
-	let data = pipe::Data {
+	let mut data = pipe::Data {
 		vbuf: mesh.vertex_buffer.clone(),
 		out_color: main_color.clone(),
 		out_depth: main_depth.clone(),
@@ -190,19 +214,30 @@ fn main() {
 			}
 		});
 
+		encoder.clear(&main_color, CLEAR_COLOR);
+		encoder.clear_depth(&main_depth, 1.0);
+
 		{
-			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position);
+			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * mesh.transform;
 			let locals = Locals {
 				model_view: model_view.into(),
 				projection: projection.into()
 			};
 			encoder.update_constant_buffer(&data.locals, &locals);
+			data.vbuf = mesh.vertex_buffer.clone();
+			encoder.draw(&mesh.slice, &pso, &data);
 		}
 
-		encoder.clear(&main_color, CLEAR_COLOR);
-		encoder.clear_depth(&main_depth, 1.0);
-
-		encoder.draw(&mesh.slice, &pso, &data);
+		{
+			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * plane.transform;
+			let locals = Locals {
+				model_view: model_view.into(),
+				projection: projection.into()
+			};
+			encoder.update_constant_buffer(&data.locals, &locals);
+			data.vbuf = plane.vertex_buffer.clone();
+			encoder.draw(&plane.slice, &pso, &data);
+		}
 
 		encoder.flush(&mut device);
 

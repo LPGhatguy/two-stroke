@@ -1,13 +1,16 @@
 use vertex::Vertex;
+
 use gfx;
 use gfx::IntoIndexBuffer;
 use gfx::traits::FactoryExt;
+use cgmath::{One, Matrix4};
 
 use gfx_types::{Resources, Factory};
 
 pub struct Mesh {
 	pub vertex_buffer: gfx::handle::Buffer<Resources, Vertex>,
 	pub slice: gfx::Slice<Resources>,
+	pub transform: Matrix4<f32>,
 }
 
 impl Mesh {
@@ -18,7 +21,24 @@ impl Mesh {
 		Mesh {
 			vertex_buffer: vertex_buffer,
 			slice: slice,
+			transform: Matrix4::one(),
 		}
+	}
+
+	pub fn plane(factory: &mut Factory) -> Mesh {
+		let vertices = vec![
+			Vertex::new(-0.5, 0.0, -0.5),
+			Vertex::new(-0.5, 0.0, 0.5),
+			Vertex::new(0.5, 0.0, 0.5),
+			Vertex::new(0.5, 0.0, -0.5),
+		];
+
+		let indices: Vec<u16> = vec![
+			0, 1, 2,
+			0, 2, 3,
+		];
+
+		Mesh::new(factory, &vertices, &indices)
 	}
 
 	pub fn cube(factory: &mut Factory) -> Mesh {
