@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cgmath::{Zero, One, Vector3, Quaternion};
+use cgmath::{Zero, One, Vector2, Vector3, Quaternion};
 use glutin::VirtualKeyCode;
 use time::precise_time_s;
 
@@ -8,26 +8,34 @@ use mesh::Mesh;
 
 pub struct InputState {
 	pub down: HashSet<VirtualKeyCode>,
+	pub mouse_position: Option<Vector2<i32>>,
+	pub mouse_move: Option<Vector2<i32>>,
 }
 
 impl InputState {
 	pub fn new() -> InputState {
 		InputState {
-			down: HashSet::new()
+			down: HashSet::new(),
+			mouse_position: None,
+			mouse_move: None
 		}
 	}
 }
 
 pub struct PlayerState {
+	pub camera_pitch: f32,
+	pub camera_yaw: f32,
 	pub camera_position: Vector3<f32>,
-	pub orientation: Quaternion<f32>,
+	pub camera_orientation: Quaternion<f32>,
 }
 
 impl PlayerState {
 	pub fn new() -> Self {
 		PlayerState {
+			camera_pitch: 0.0,
+			camera_yaw: 0.0,
 			camera_position: Vector3::zero(),
-			orientation: Quaternion::one(),
+			camera_orientation: Quaternion::one(),
 		}
 	}
 }

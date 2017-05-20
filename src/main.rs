@@ -11,13 +11,15 @@ mod vertex;
 mod mesh;
 mod state;
 
+use std::f32::consts::PI;
+
 use time::precise_time_s;
 
 use gfx::traits::FactoryExt;
 use gfx::Device;
 
 use cgmath::prelude::*;
-use cgmath::{Vector2, Vector3, Point3, Matrix4, Deg};
+use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
 
 use state::State;
 use mesh::Mesh;
@@ -41,7 +43,21 @@ gfx_defines! {
 
 const CLEAR_COLOR: [f32; 4] = [0.1, 0.2, 0.3, 1.0];
 
-fn handle_event(state: &mut State, event: glutin::WindowEvent) {
+fn clamp(value: f32, min: f32, max: f32) -> f32 {
+	assert!(min < max);
+
+	if value > max {
+		return max;
+	}
+
+	if value < min {
+		return min;
+	}
+
+	value
+}
+
+fn handle_event(window: &glutin::Window, state: &mut State, event: glutin::WindowEvent) {
 	match event {
 		glutin::WindowEvent::Closed | glutin::WindowEvent::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape), _) => {
 			state.running = false;
@@ -53,8 +69,19 @@ fn handle_event(state: &mut State, event: glutin::WindowEvent) {
 				},
 				glutin::ElementState::Released => {
 					state.input.down.remove(&keycode);
-				}
+				},
 			}
+		},
+		glutin::WindowEvent::MouseMoved(x, y) => {
+			match state.input.mouse_position {
+				Some(_) => {
+					state.input.mouse_move = Some(Vector2::new(x - 200, y - 200));
+				},
+				None => (),
+			}
+
+			state.input.mouse_position = Some(Vector2::new(x, y));
+			window.set_cursor_position(200, 200).unwrap();
 		},
 		_ => ()
 	}
@@ -82,15 +109,41 @@ fn handle_update(state: &mut State) {
 		change.z = 1.0;
 	}
 
-	if state.input.down.contains(&glutin::VirtualKeyCode::E) {
-		change.y = 1.0;
-	} else if state.input.down.contains(&glutin::VirtualKeyCode::Q) {
-		change.y = -1.0;
-	}
-
 	if !change.is_zero() {
 		change = change.normalize_to(delta * 3.0);
+		change = state.player.camera_orientation.invert().rotate_vector(change);
 		state.player.camera_position += change;
+	}
+
+	let mut vertical = 0.0f32;
+
+	if state.input.down.contains(&glutin::VirtualKeyCode::E) {
+		vertical = 1.0;
+	} else if state.input.down.contains(&glutin::VirtualKeyCode::Q) {
+		vertical = -1.0;
+	}
+
+	if !vertical.is_zero() {
+		state.player.camera_position.y += vertical * delta * 3.0;
+	}
+
+	match state.input.mouse_move {
+		Some(mouse_move) => {
+			let pitch = state.player.camera_pitch + (mouse_move.y as f32) * delta * 0.3;
+			let pitch = clamp(pitch, -PI / 3.0, PI / 3.0);
+
+			state.player.camera_pitch = pitch;
+			state.player.camera_yaw += (mouse_move.x as f32) * delta * 0.3;
+
+			state.player.camera_orientation = Quaternion::from(Euler {
+				x: Rad(state.player.camera_pitch),
+				y: Rad(state.player.camera_yaw),
+				z: Rad(0.0)
+			});
+
+			state.input.mouse_move = None;
+		},
+		None => ()
 	}
 }
 
@@ -113,6 +166,8 @@ fn main() {
 	).unwrap();
 
 	let mut state = State::new();
+	state.player.camera_position = Vector3::new(0.0, 0.0, 3.0);
+
 	let mesh = Mesh::cube(&mut factory);
 
 	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
@@ -130,15 +185,13 @@ fn main() {
 		events_loop.poll_events(|event| {
 			match event {
 				glutin::Event::WindowEvent { event, .. } => {
-					handle_event(&mut state, event);
+					handle_event(&window, &mut state, event);
 				}
 			}
 		});
 
 		{
-			println!("{:?}", state.player.camera_position);
-			let model_view = Matrix4::from_translation(-state.player.camera_position);
-			let model_view = Matrix4::look_at(Point3::from_vec(state.player.camera_position), Point3::origin(), Vector3::unit_y()) * model_view;
+			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position);
 			let locals = Locals {
 				model_view: model_view.into(),
 				projection: projection.into()
