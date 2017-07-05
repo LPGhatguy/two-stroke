@@ -8,16 +8,16 @@ use mesh::Mesh;
 
 pub struct InputState {
 	pub down: HashSet<VirtualKeyCode>,
-	pub mouse_position: Option<Vector2<i32>>,
-	pub mouse_move: Option<Vector2<i32>>,
+	pub last_mouse_position: Option<Vector2<i32>>,
+	pub mouse_position: Option<Vector2<i32>>
 }
 
 impl InputState {
 	pub fn new() -> InputState {
 		InputState {
 			down: HashSet::new(),
+			last_mouse_position: None,
 			mouse_position: None,
-			mouse_move: None
 		}
 	}
 }

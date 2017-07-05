@@ -5,6 +5,7 @@ extern crate gfx_device_gl;
 extern crate gfx_window_glutin;
 extern crate glutin;
 extern crate time;
+extern crate winit;
 
 mod gfx_types;
 mod vertex;
@@ -58,32 +59,31 @@ fn clamp(value: f32, min: f32, max: f32) -> f32 {
 	value
 }
 
-fn handle_event(window: &glutin::Window, state: &mut State, event: glutin::WindowEvent) {
+fn handle_key(state: &mut State, key_code: glutin::VirtualKeyCode, key_state: glutin::ElementState) {
+
+}
+
+fn handle_event(window: &glutin::Window, state: &mut State, event: winit::WindowEvent) {
 	match event {
-		glutin::WindowEvent::Closed | glutin::WindowEvent::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape), _) => {
+		winit::WindowEvent::Closed | winit::WindowEvent::KeyboardInput { input: winit::KeyboardInput { virtual_keycode: Some(winit::VirtualKeyCode::Escape), .. }, .. } => {
 			state.running = false;
 		},
-		glutin::WindowEvent::KeyboardInput(key_state, _, Some(keycode), _) => {
-			match key_state {
-				glutin::ElementState::Pressed => {
-					state.input.down.insert(keycode);
-				},
-				glutin::ElementState::Released => {
-					state.input.down.remove(&keycode);
-				},
-			}
+		// glutin::WindowEvent::KeyboardInput(key_state, _, Some(keycode), _) => {
+		// 	match key_state {
+		// 		glutin::ElementState::Pressed => {
+		// 			state.input.down.insert(keycode);
+		// 		},
+		// 		glutin::ElementState::Released => {
+		// 			state.input.down.remove(&keycode);
+		// 		},
+		// 	}
+		// },
+		winit::WindowEvent::MouseMoved { position: (x, y), .. } => {
+			state.input.mouse_position = Some(Vector2::new(x as i32, y as i32));
 		},
-		glutin::WindowEvent::MouseMoved(x, y) => {
-			match state.input.mouse_position {
-				Some(_) => {
-					state.input.mouse_move = Some(Vector2::new(x - 200, y - 200));
-				},
-				None => (),
-			}
-
-			state.input.mouse_position = Some(Vector2::new(x, y));
-			window.set_cursor_position(200, 200).unwrap();
-		},
+		// winit::WindowEvent::MouseRawMovement { position: (x, y), .. } => {
+		// 	println!("Mouse moved {}, {}", x, y);
+		// },
 		_ => ()
 	}
 }
@@ -92,6 +92,20 @@ fn handle_update(state: &mut State) {
 	let now = precise_time_s();
 	let delta_full = now - state.last_update_time;
 	let delta = delta_full as f32;
+
+	let mouse_delta = match state.input.mouse_position {
+		Some(mouse_position) => {
+			match state.input.last_mouse_position {
+				Some(last_mouse_position) => {
+					Some(mouse_position - last_mouse_position)
+				},
+				None => None
+			}
+		},
+		None => None
+	};
+
+	state.input.last_mouse_position = state.input.mouse_position;
 
 	state.total_time += delta_full;
 	state.last_update_time = now;
@@ -128,28 +142,27 @@ fn handle_update(state: &mut State) {
 		state.player.camera_position.y += vertical * delta * 3.0;
 	}
 
-	match state.input.mouse_move {
-		Some(mouse_move) => {
-			let pitch = state.player.camera_pitch + (mouse_move.y as f32) * delta * 0.3;
+	match mouse_delta {
+		Some(mouse_delta) => {
+			let turn_rate = 0.3;
+			let pitch = state.player.camera_pitch + (mouse_delta.y as f32) * delta * turn_rate;
 			let pitch = clamp(pitch, -PI / 3.0, PI / 3.0);
 
 			state.player.camera_pitch = pitch;
-			state.player.camera_yaw += (mouse_move.x as f32) * delta * 0.3;
+			state.player.camera_yaw += (mouse_delta.x as f32) * delta * turn_rate;
 
 			state.player.camera_orientation = Quaternion::from(Euler {
 				x: Rad(state.player.camera_pitch),
 				y: Rad(state.player.camera_yaw),
 				z: Rad(0.0)
 			});
-
-			state.input.mouse_move = None;
 		},
 		None => ()
 	}
 }
 
 fn main() {
-	let events_loop = glutin::EventsLoop::new();
+	let mut events_loop = glutin::EventsLoop::new();
 	let builder = glutin::WindowBuilder::new()
 		.with_title("Triangle example".to_string())
 		.with_dimensions(1280, 720)
@@ -188,11 +201,11 @@ fn main() {
 	let mut state = State::new();
 	state.player.camera_position = Vector3::new(0.0, 0.0, 3.0);
 
-	let mut plane = Mesh::plane(&mut factory);
+	let mut plane = Mesh::plane(&mut factory, 5);
 	plane.transform = Matrix4::from_scale(5.0);
 
 	let mut mesh = Mesh::cube(&mut factory);
-	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 2.0, 0.0));
+	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
 
 	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
 
@@ -206,11 +219,21 @@ fn main() {
 	while state.running {
 		handle_update(&mut state);
 
+		match state.input.mouse_position {
+			Some(Vector2 { x, y }) => {
+				if x != 200 || y != 200 {
+					window.set_cursor_position(200, 200);
+				}
+			},
+			_ => ()
+		};
+
 		events_loop.poll_events(|event| {
 			match event {
 				glutin::Event::WindowEvent { event, .. } => {
 					handle_event(&window, &mut state, event);
-				}
+				},
+				_ => ()
 			}
 		});
 
