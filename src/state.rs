@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use cgmath::{Zero, One, Vector2, Vector3, Quaternion};
-use glutin::VirtualKeyCode;
+use glfw::Key;
 use time::precise_time_s;
 
 use mesh::Mesh;
 
 pub struct InputState {
-	pub down: HashSet<VirtualKeyCode>,
+	pub down: HashSet<Key>,
 	pub last_mouse_position: Option<Vector2<i32>>,
 	pub mouse_position: Option<Vector2<i32>>
 }

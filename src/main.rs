@@ -2,10 +2,9 @@ extern crate cgmath;
 #[macro_use]
 extern crate gfx;
 extern crate gfx_device_gl;
-extern crate gfx_window_glutin;
-extern crate glutin;
+extern crate gfx_window_glfw;
+extern crate glfw;
 extern crate time;
-extern crate winit;
 
 mod gfx_types;
 mod vertex;
@@ -15,6 +14,8 @@ mod state;
 use std::f32::consts::PI;
 
 use time::precise_time_s;
+
+use glfw::{Action, Context, Key};
 
 use gfx::traits::FactoryExt;
 use gfx::Device;
@@ -59,14 +60,10 @@ fn clamp(value: f32, min: f32, max: f32) -> f32 {
 	value
 }
 
-fn handle_key(state: &mut State, key_code: glutin::VirtualKeyCode, key_state: glutin::ElementState) {
-
-}
-
-fn handle_event(window: &glutin::Window, state: &mut State, event: winit::WindowEvent) {
+fn handle_event(window: &mut glfw::Window, state: &mut State, event: glfw::WindowEvent) {
 	match event {
-		winit::WindowEvent::Closed | winit::WindowEvent::KeyboardInput { input: winit::KeyboardInput { virtual_keycode: Some(winit::VirtualKeyCode::Escape), .. }, .. } => {
-			state.running = false;
+		glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+			window.set_should_close(true);
 		},
 		// glutin::WindowEvent::KeyboardInput(key_state, _, Some(keycode), _) => {
 		// 	match key_state {
@@ -78,11 +75,8 @@ fn handle_event(window: &glutin::Window, state: &mut State, event: winit::Window
 		// 		},
 		// 	}
 		// },
-		winit::WindowEvent::MouseMoved { position: (x, y), .. } => {
-			state.input.mouse_position = Some(Vector2::new(x as i32, y as i32));
-		},
-		// winit::WindowEvent::MouseRawMovement { position: (x, y), .. } => {
-		// 	println!("Mouse moved {}, {}", x, y);
+		// winit::WindowEvent::MouseMoved { position: (x, y), .. } => {
+		// 	state.input.mouse_position = Some(Vector2::new(x as i32, y as i32));
 		// },
 		_ => ()
 	}
@@ -112,15 +106,15 @@ fn handle_update(state: &mut State) {
 
 	let mut change = Vector3::zero();
 
-	if state.input.down.contains(&glutin::VirtualKeyCode::D) {
+	if state.input.down.contains(&glfw::Key::D) {
 		change.x = 1.0;
-	} else if state.input.down.contains(&glutin::VirtualKeyCode::A) {
+	} else if state.input.down.contains(&glfw::Key::A) {
 		change.x = -1.0;
 	}
 
-	if state.input.down.contains(&glutin::VirtualKeyCode::W) {
+	if state.input.down.contains(&glfw::Key::W) {
 		change.z = -1.0;
-	} else if state.input.down.contains(&glutin::VirtualKeyCode::S) {
+	} else if state.input.down.contains(&glfw::Key::S) {
 		change.z = 1.0;
 	}
 
@@ -132,9 +126,9 @@ fn handle_update(state: &mut State) {
 
 	let mut vertical = 0.0f32;
 
-	if state.input.down.contains(&glutin::VirtualKeyCode::E) {
+	if state.input.down.contains(&glfw::Key::E) {
 		vertical = 1.0;
-	} else if state.input.down.contains(&glutin::VirtualKeyCode::Q) {
+	} else if state.input.down.contains(&glfw::Key::Q) {
 		vertical = -1.0;
 	}
 
@@ -162,14 +156,23 @@ fn handle_update(state: &mut State) {
 }
 
 fn main() {
-	let mut events_loop = glutin::EventsLoop::new();
-	let builder = glutin::WindowBuilder::new()
-		.with_title("Triangle example".to_string())
-		.with_dimensions(1280, 720)
-		.with_vsync();
+	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)
+		.ok()
+		.expect("Failed to initialize GLFW");
 
-	let (window, mut device, mut factory, main_color, main_depth) =
-		gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder, &events_loop);
+	glfw.window_hint(glfw::WindowHint::ContextVersion(4, 3));
+	glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(false));
+	glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+
+	let (mut window, events) = glfw.create_window(1024, 768, "Window example", glfw::WindowMode::Windowed)
+		.expect("Failed to create GLFW window.");
+
+	window.set_key_polling(true);
+	window.set_close_polling(true);
+	window.make_current();
+	glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
+
+	let (mut device, mut factory, main_color, main_depth) = gfx_window_glfw::init(&mut window);
 
 	let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
@@ -191,6 +194,7 @@ fn main() {
 		Rasterizer {
 			front_face: FrontFace::CounterClockwise,
 			cull_face: CullFace::Back,
+			// method: RasterMethod::Line(8),
 			method: RasterMethod::Line(8),
 			offset: None,
 			samples: None,
@@ -216,26 +220,14 @@ fn main() {
 		locals: factory.create_constant_buffer(2)
 	};
 
-	while state.running {
+	while !window.should_close() {
 		handle_update(&mut state);
 
-		match state.input.mouse_position {
-			Some(Vector2 { x, y }) => {
-				if x != 200 || y != 200 {
-					window.set_cursor_position(200, 200);
-				}
-			},
-			_ => ()
-		};
+		glfw.poll_events();
 
-		events_loop.poll_events(|event| {
-			match event {
-				glutin::Event::WindowEvent { event, .. } => {
-					handle_event(&window, &mut state, event);
-				},
-				_ => ()
-			}
-		});
+		for (_, event) in glfw::flush_messages(&events) {
+			handle_event(&mut window, &mut state, event);
+		}
 
 		encoder.clear(&main_color, CLEAR_COLOR);
 		encoder.clear_depth(&main_depth, 1.0);
@@ -264,7 +256,7 @@ fn main() {
 
 		encoder.flush(&mut device);
 
-		window.swap_buffers().unwrap();
+		window.swap_buffers();
 		device.cleanup();
 	}
 }

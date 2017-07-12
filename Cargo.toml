@@ -4,13 +4,10 @@ version = "0.1.0"
 authors = ["Lucien Greathouse <me@lpghatguy.com>"]
 
 [dependencies]
-gfx = "*"
-gfx_device_gl = "*"
-gfx_window_glutin = "*"
 cgmath = "*"
 time = "*"
-glutin = { path = "../glutin" }
-winit = { path = "../winit" }
+glfw = "0.15.0"
 
-[replace]
-"glutin:0.8.1" = { path = "../glutin" }
+gfx = { path = "../gfx/src/render" }
+gfx_device_gl = { path = "../gfx/src/backend/gl" }
+gfx_window_glfw = { path = "../gfx/src/window/glfw" }
