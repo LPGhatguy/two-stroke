@@ -8,17 +8,21 @@ use mesh::Mesh;
 
 pub struct InputState {
 	pub down: HashSet<Key>,
-	pub last_mouse_position: Option<Vector2<i32>>,
-	pub mouse_position: Option<Vector2<i32>>
+	pub last_mouse_position: Vector2<f64>,
+	pub mouse_position: Vector2<f64>
 }
 
 impl InputState {
 	pub fn new() -> InputState {
 		InputState {
 			down: HashSet::new(),
-			last_mouse_position: None,
-			mouse_position: None,
+			last_mouse_position: Vector2::new(0.0, 0.0),
+			mouse_position: Vector2::new(0.0, 0.0),
 		}
+	}
+
+	pub fn get_mouse_delta(&self) -> Vector2<f64> {
+		self.mouse_position - self.last_mouse_position
 	}
 }
 

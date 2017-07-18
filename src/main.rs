@@ -65,19 +65,20 @@ fn handle_event(window: &mut glfw::Window, state: &mut State, event: glfw::Windo
 		glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
 			window.set_should_close(true);
 		},
-		// glutin::WindowEvent::KeyboardInput(key_state, _, Some(keycode), _) => {
-		// 	match key_state {
-		// 		glutin::ElementState::Pressed => {
-		// 			state.input.down.insert(keycode);
-		// 		},
-		// 		glutin::ElementState::Released => {
-		// 			state.input.down.remove(&keycode);
-		// 		},
-		// 	}
-		// },
-		// winit::WindowEvent::MouseMoved { position: (x, y), .. } => {
-		// 	state.input.mouse_position = Some(Vector2::new(x as i32, y as i32));
-		// },
+		glfw::WindowEvent::Key(keycode, _, action, _) => {
+			match action {
+				Action::Press => {
+					state.input.down.insert(keycode);
+				},
+				Action::Release => {
+					state.input.down.remove(&keycode);
+				},
+				_ => ()
+			}
+		},
+		glfw::WindowEvent::CursorPos(x, y) => {
+			state.input.mouse_position = Vector2::new(x, y);
+		},
 		_ => ()
 	}
 }
@@ -87,17 +88,7 @@ fn handle_update(state: &mut State) {
 	let delta_full = now - state.last_update_time;
 	let delta = delta_full as f32;
 
-	let mouse_delta = match state.input.mouse_position {
-		Some(mouse_position) => {
-			match state.input.last_mouse_position {
-				Some(last_mouse_position) => {
-					Some(mouse_position - last_mouse_position)
-				},
-				None => None
-			}
-		},
-		None => None
-	};
+	let mouse_delta = state.input.get_mouse_delta();
 
 	state.input.last_mouse_position = state.input.mouse_position;
 
@@ -136,22 +127,19 @@ fn handle_update(state: &mut State) {
 		state.player.camera_position.y += vertical * delta * 3.0;
 	}
 
-	match mouse_delta {
-		Some(mouse_delta) => {
-			let turn_rate = 0.3;
-			let pitch = state.player.camera_pitch + (mouse_delta.y as f32) * delta * turn_rate;
-			let pitch = clamp(pitch, -PI / 3.0, PI / 3.0);
+	if !mouse_delta.is_zero() {
+		let turn_rate = 0.3;
+		let pitch = state.player.camera_pitch + (mouse_delta.y as f32) * delta * turn_rate;
+		let pitch = clamp(pitch, -PI / 3.0, PI / 3.0);
 
-			state.player.camera_pitch = pitch;
-			state.player.camera_yaw += (mouse_delta.x as f32) * delta * turn_rate;
+		state.player.camera_pitch = pitch;
+		state.player.camera_yaw += (mouse_delta.x as f32) * delta * turn_rate;
 
-			state.player.camera_orientation = Quaternion::from(Euler {
-				x: Rad(state.player.camera_pitch),
-				y: Rad(state.player.camera_yaw),
-				z: Rad(0.0)
-			});
-		},
-		None => ()
+		state.player.camera_orientation = Quaternion::from(Euler {
+			x: Rad(state.player.camera_pitch),
+			y: Rad(state.player.camera_yaw),
+			z: Rad(0.0)
+		});
 	}
 }
 
@@ -167,8 +155,12 @@ fn main() {
 	let (mut window, events) = glfw.create_window(1024, 768, "Window example", glfw::WindowMode::Windowed)
 		.expect("Failed to create GLFW window.");
 
-	window.set_key_polling(true);
-	window.set_close_polling(true);
+	window.set_all_polling(true);
+	// window.set_key_polling(true);
+	// window.set_close_polling(true);
+	window.set_cursor_mode(glfw::CursorMode::Disabled);
+	window.set_cursor_pos(0.0, 0.0);
+
 	window.make_current();
 	glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
 
@@ -195,7 +187,7 @@ fn main() {
 			front_face: FrontFace::CounterClockwise,
 			cull_face: CullFace::Back,
 			// method: RasterMethod::Line(8),
-			method: RasterMethod::Line(8),
+			method: RasterMethod::Fill,
 			offset: None,
 			samples: None,
 		},
