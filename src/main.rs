@@ -160,6 +160,8 @@ fn main() {
 	window.set_cursor_pos(0.0, 0.0);
 
 	window.make_current();
+
+	glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
 	glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
 
 	let (mut device, mut factory, main_color, main_depth) = gfx_window_glfw::init(&mut window);
