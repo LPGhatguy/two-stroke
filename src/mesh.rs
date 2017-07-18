@@ -26,18 +26,16 @@ impl Mesh {
 	}
 
 	pub fn plane(factory: &mut Factory, size: usize) -> Mesh {
-		let mut vertices = Vec::<Vertex>::with_capacity(size * size);
-		let mut indices = Vec::<u16>::new();
-
-		for x in 0..size {
-			for z in 0..size {
-				vertices.push(Vertex::new(
-					x as f32,
-					0.0,
-					z as f32
-				))
-			}
-		}
+		let vertices = vec![
+			Vertex::new(-0.5, 0.0, -0.5),
+			Vertex::new(-0.5, 0.0, 0.5),
+			Vertex::new(0.5, 0.0, 0.5),
+			Vertex::new(0.5, 0.0, -0.5),
+		];
+		let indices: Vec<u16> = vec![
+			0, 1, 3,
+			3, 1, 2,
+		];
 
 		Mesh::new(factory, &vertices, &indices)
 	}

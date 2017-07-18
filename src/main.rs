@@ -156,8 +156,6 @@ fn main() {
 		.expect("Failed to create GLFW window.");
 
 	window.set_all_polling(true);
-	// window.set_key_polling(true);
-	// window.set_close_polling(true);
 	window.set_cursor_mode(glfw::CursorMode::Disabled);
 	window.set_cursor_pos(0.0, 0.0);
 
@@ -186,8 +184,20 @@ fn main() {
 		Rasterizer {
 			front_face: FrontFace::CounterClockwise,
 			cull_face: CullFace::Back,
-			// method: RasterMethod::Line(8),
 			method: RasterMethod::Fill,
+			offset: None,
+			samples: None,
+		},
+		pipe::new()
+	).unwrap();
+
+	let pso_lines = factory.create_pipeline_state(
+		&shader_set,
+		gfx::Primitive::TriangleList,
+		Rasterizer {
+			front_face: FrontFace::CounterClockwise,
+			cull_face: CullFace::Nothing,
+			method: RasterMethod::Line(4),
 			offset: None,
 			samples: None,
 		},
@@ -198,7 +208,7 @@ fn main() {
 	state.player.camera_position = Vector3::new(0.0, 0.0, 3.0);
 
 	let mut plane = Mesh::plane(&mut factory, 5);
-	plane.transform = Matrix4::from_scale(5.0);
+	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -2.0, 0.0)) * Matrix4::from_scale(10.0);
 
 	let mut mesh = Mesh::cube(&mut factory);
 	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
@@ -243,7 +253,7 @@ fn main() {
 			};
 			encoder.update_constant_buffer(&data.locals, &locals);
 			data.vbuf = plane.vertex_buffer.clone();
-			encoder.draw(&plane.slice, &pso, &data);
+			encoder.draw(&plane.slice, &pso_lines, &data);
 		}
 
 		encoder.flush(&mut device);
