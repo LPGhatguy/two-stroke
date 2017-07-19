@@ -199,7 +199,7 @@ fn main() {
 		Rasterizer {
 			front_face: FrontFace::CounterClockwise,
 			cull_face: CullFace::Nothing,
-			method: RasterMethod::Line(4),
+			method: RasterMethod::Line(2),
 			offset: None,
 			samples: None,
 		},
@@ -207,13 +207,13 @@ fn main() {
 	).unwrap();
 
 	let mut state = State::new();
-	state.player.camera_position = Vector3::new(0.0, 0.0, 3.0);
+	state.player.camera_position = Vector3::new(0.0, 0.0, 0.0);
 
-	let mut plane = Mesh::plane(&mut factory, 5);
-	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -2.0, 0.0)) * Matrix4::from_scale(10.0);
+	let mut plane = Mesh::plane(&mut factory, 4);
+	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -2.0, 0.0));
 
 	let mut mesh = Mesh::cube(&mut factory);
-	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0));
+	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 2.0));
 
 	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
 
