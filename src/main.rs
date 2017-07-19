@@ -5,6 +5,7 @@ extern crate gfx_device_gl;
 extern crate gfx_window_glfw;
 extern crate glfw;
 extern crate time;
+extern crate rusttype;
 
 mod gfx_types;
 mod vertex;

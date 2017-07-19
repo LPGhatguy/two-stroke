@@ -7,6 +7,7 @@ authors = ["Lucien Greathouse <me@lpghatguy.com>"]
 cgmath = "*"
 time = "*"
 glfw = "0.15.0"
+rusttype = "0.2.1"
 
 gfx = { path = "../gfx/src/render" }
 gfx_device_gl = { path = "../gfx/src/backend/gl" }
