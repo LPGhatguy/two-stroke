@@ -209,8 +209,8 @@ fn main() {
 	let mut state = State::new();
 	state.player.camera_position = Vector3::new(0.0, 0.0, 0.0);
 
-	let mut plane = Mesh::plane(&mut factory, 4);
-	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -2.0, 0.0));
+	let mut plane = Mesh::plane(&mut factory, 16);
+	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -1.0, 0.0));
 
 	let mut mesh = Mesh::cube(&mut factory);
 	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 2.0));

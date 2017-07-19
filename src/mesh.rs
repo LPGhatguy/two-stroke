@@ -26,36 +26,30 @@ impl Mesh {
 	}
 
 	pub fn plane(factory: &mut Factory, size: usize) -> Mesh {
-		let area = (size - 1) * (size - 1);
-
 		let mut vertices = Vec::<Vertex>::with_capacity((size + 1) * (size + 1));
+		let mut indices = Vec::<u16>::with_capacity(6 * size * size);
 
-		// Number of triangles is 2 * area, 3 vertices per triangle
-		let mut indices = Vec::<u16>::with_capacity(3 * 2 * area);
-
-		let width = size as u16;
-
-		for x in 0..size {
-			for z in 0..size {
+		for z in 0..(size + 1) {
+			for x in 0..(size + 1) {
 				vertices.push(Vertex::new(
-					x as f32,
+					x as f32 - (size as f32 / 2.0),
 					0.0,
-					z as f32
+					z as f32 - (size as f32 / 2.0)
 				))
 			}
 		}
 
-		for x in 0..(width - 1) {
-			for y in 0..(width - 1) {
-				let n = x + y * width;
+		for x in 0..size {
+			for y in 0..size {
+				let n = x + y * (size + 1);
 
-				indices.push(n);
-				indices.push(n + width + 1);
-				indices.push(n + 1);
+				indices.push((n) as u16);
+				indices.push((n + size + 2) as u16);
+				indices.push((n + 1) as u16);
 
-				indices.push(n);
-				indices.push(n + width);
-				indices.push(n + width + 1);
+				indices.push((n) as u16);
+				indices.push((n + size + 1) as u16);
+				indices.push((n + size + 2) as u16);
 			}
 		}
 
