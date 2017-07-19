@@ -13,6 +13,7 @@ mod mesh;
 mod state;
 
 use std::f32::consts::PI;
+use std::cmp;
 
 use time::precise_time_s;
 
@@ -24,6 +25,8 @@ use gfx::state::{Rasterizer, RasterMethod, FrontFace, CullFace};
 
 use cgmath::prelude::*;
 use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
+
+use rusttype::{FontCollection, PositionedGlyph};
 
 use state::State;
 use mesh::Mesh;
@@ -224,6 +227,64 @@ fn main() {
 		out_depth: main_depth.clone(),
 		locals: factory.create_constant_buffer(2)
 	};
+
+	let font_data = include_bytes!("font/Roboto-Light.ttf");
+	let collection = FontCollection::from_bytes(font_data as &[u8]);
+	let font = collection.into_font().unwrap();
+
+	let text_height: f32 = 12.4;
+	let pixel_height = text_height.ceil() as usize;
+
+	let scale = rusttype::Scale {
+		x: text_height * 2.0,
+		y: text_height,
+	};
+
+	let v_metrics = font.v_metrics(scale);
+	let offset = rusttype::point(0.0, v_metrics.ascent);
+
+	let glyphs: Vec<PositionedGlyph> = font.layout("Hello, world!", scale, offset).collect();
+
+	let mut min_x = 0;
+	let mut min_y = 0;
+	let mut max_x = 0;
+	let mut max_y = 0;
+
+	for glyph in &glyphs {
+		if let Some(bb) = glyph.pixel_bounding_box() {
+			min_x = cmp::min(min_x, bb.min.x);
+			min_y = cmp::min(min_y, bb.min.y);
+			max_x = cmp::max(max_x, bb.max.x);
+			max_y = cmp::max(max_y, bb.max.y);
+
+			println!("{:?}", bb);
+		}
+	}
+
+	let width = max_x - min_x;
+	let height = max_y - min_y;
+
+	let mut texture = Vec::<[u8; 4]>::with_capacity(4);
+
+	for x in 0..width {
+		for y in 0..height {
+			texture.push([0, 0, 0, 0]);
+		}
+	}
+
+	for glyph in &glyphs {
+		glyph.draw(|x, y, v| {
+			if let Some(bb) = glyph.pixel_bounding_box() {
+				let x = x as i32 + bb.min.x;
+				let y = y as i32 + bb.min.y;
+
+				texture[(y + x * width) as usize] = [0, 0, 0, (v * 255.0) as u8];
+			}
+		});
+	}
+
+	println!("({}, {}) to ({}, {})", min_x, min_y, max_x, max_y);
+	println!("{:?}", texture);
 
 	while !window.should_close() {
 		handle_update(&mut state);
