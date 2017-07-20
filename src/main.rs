@@ -289,11 +289,10 @@ fn main() {
 	let collection = FontCollection::from_bytes(font_data as &[u8]);
 	let font = collection.into_font().unwrap();
 
-	let text_height: f32 = 12.4;
-	let pixel_height = text_height.ceil() as usize;
+	let text_height: f32 = 16.0;
 
 	let scale = rusttype::Scale {
-		x: text_height * 2.0,
+		x: text_height,
 		y: text_height,
 	};
 
@@ -321,7 +320,7 @@ fn main() {
 
 	let mut texture = Vec::<u8>::with_capacity(width * height * 4);
 
-	for x in 0..(width * height) {
+	for _ in 0..(width * height) {
 		texture.push(0);
 		texture.push(0);
 		texture.push(0);
