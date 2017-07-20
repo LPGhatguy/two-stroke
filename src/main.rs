@@ -57,8 +57,8 @@ gfx_defines! {
 
 	pipeline text_pipe {
 		vbuf: gfx::VertexBuffer<TextVertex> = (),
-		image: gfx::TextureSampler<[f32; 4]> = "t_texture",
-		out: gfx::RenderTarget<ColorFormat> = "Target0",
+		image: gfx::TextureSampler<[f32; 4]> = "t_Texture",
+		out: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
 	}
 }
 
@@ -291,7 +291,7 @@ fn main() {
 	let v_metrics = font.v_metrics(scale);
 	let offset = rusttype::point(0.0, v_metrics.ascent);
 
-	let glyphs: Vec<PositionedGlyph> = font.layout("Hello, world!", scale, offset).collect();
+	let glyphs: Vec<PositionedGlyph> = font.layout("Hello", scale, offset).collect();
 
 	let mut min_x = 0;
 	let mut min_y = 0;
@@ -304,8 +304,6 @@ fn main() {
 			min_y = cmp::min(min_y, bb.min.y);
 			max_x = cmp::max(max_x, bb.max.x);
 			max_y = cmp::max(max_y, bb.max.y);
-
-			println!("{:?}", bb);
 		}
 	}
 
@@ -315,25 +313,29 @@ fn main() {
 	let mut texture = Vec::<u8>::with_capacity(width * height * 4);
 
 	for x in 0..(width * height) {
-		texture.push(255);
-		texture.push(255);
-		texture.push(255);
+		texture.push(0);
+		texture.push(0);
+		texture.push(0);
 		texture.push(0);
 	}
 
 	println!("({}, {}) to ({}, {})", min_x, min_y, max_x, max_y);
 
 	for glyph in &glyphs {
-		glyph.draw(|x, y, v| {
-			if let Some(bb) = glyph.pixel_bounding_box() {
+		if let Some(bb) = glyph.pixel_bounding_box() {
+			glyph.draw(|x, y, v| {
 				let x = (x as i32 + bb.min.x) as usize;
 				let y = (y as i32 + bb.min.y) as usize;
 
-				texture[y * width * 4 + x * 4 + 3] = (v * 255.0) as u8;
-			}
-		});
+				texture[y * (width * 4) + x * 4 + 0] = 255;
+				texture[y * (width * 4) + x * 4 + 1] = 255;
+				texture[y * (width * 4) + x * 4 + 2] = 255;
+				texture[y * (width * 4) + x * 4 + 3] = (v * 255.0) as u8;
+			});
+		}
 	}
 
+	println!("{:?}", texture);
 	println!("({}, {})", width, height);
 
 	let texture_view = {
@@ -395,6 +397,10 @@ fn main() {
 			encoder.update_constant_buffer(&data.locals, &locals);
 			data.vbuf = plane.vertex_buffer.clone();
 			encoder.draw(&plane.slice, &pso_lines, &data);
+		}
+
+		{
+			encoder.draw(&text_slice, &pso_text, &text_data);
 		}
 
 		encoder.flush(&mut device);
