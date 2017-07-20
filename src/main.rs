@@ -35,6 +35,9 @@ use mesh::Mesh;
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
 
+const WINDOW_WIDTH: u32 = 1024;
+const WINDOW_HEIGHT: u32 = 768;
+
 gfx_defines! {
 	constant Locals {
 		model_view: [[f32; 4]; 4] = "u_ModelView",
@@ -50,6 +53,11 @@ gfx_defines! {
 }
 
 gfx_defines! {
+	constant TextLocals {
+		screen_size: [f32; 2] = "u_ScreenSize",
+		texture_size: [f32; 2] = "u_TextureSize",
+	}
+
 	vertex TextVertex {
 	    pos: [f32; 2] = "a_Pos",
 	    uv: [f32; 2] = "a_Uv",
@@ -59,6 +67,7 @@ gfx_defines! {
 		vbuf: gfx::VertexBuffer<TextVertex> = (),
 		image: gfx::TextureSampler<[f32; 4]> = "t_Texture",
 		out: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
+		locals: gfx::ConstantBuffer<TextLocals> = "Locals",
 	}
 }
 
@@ -179,7 +188,7 @@ fn main() {
 	glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(false));
 	glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
-	let (mut window, events) = glfw.create_window(1024, 768, "Window example", glfw::WindowMode::Windowed)
+	let (mut window, events) = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Window example", glfw::WindowMode::Windowed)
 		.expect("Failed to create GLFW window.");
 
 	window.set_all_polling(true);
@@ -267,7 +276,7 @@ fn main() {
 	let mut mesh = Mesh::cube(&mut factory);
 	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 2.0));
 
-	let projection = cgmath::perspective(Deg(60.0f32), 16.0 / 9.0, 0.05, 100.0);
+	let projection = cgmath::perspective(Deg(60.0f32), (WINDOW_WIDTH as f32) / (WINDOW_HEIGHT as f32), 0.05, 100.0);
 
 	let mut data = pipe::Data {
 		vbuf: mesh.vertex_buffer.clone(),
@@ -291,7 +300,7 @@ fn main() {
 	let v_metrics = font.v_metrics(scale);
 	let offset = rusttype::point(0.0, v_metrics.ascent);
 
-	let glyphs: Vec<PositionedGlyph> = font.layout("Hello", scale, offset).collect();
+	let glyphs: Vec<PositionedGlyph> = font.layout("[Hello, world!] |||", scale, offset).collect();
 
 	let mut min_x = 0;
 	let mut min_y = 0;
@@ -319,8 +328,6 @@ fn main() {
 		texture.push(0);
 	}
 
-	println!("({}, {}) to ({}, {})", min_x, min_y, max_x, max_y);
-
 	for glyph in &glyphs {
 		if let Some(bb) = glyph.pixel_bounding_box() {
 			glyph.draw(|x, y, v| {
@@ -334,9 +341,6 @@ fn main() {
 			});
 		}
 	}
-
-	println!("{:?}", texture);
-	println!("({}, {})", width, height);
 
 	let texture_view = {
 		use gfx::Factory;
@@ -359,11 +363,19 @@ fn main() {
 	];
 	let (text_vbuf, text_slice) = factory.create_vertex_buffer_with_slice(&text_vertices, ());
 
+	let text_locals = TextLocals {
+		screen_size: [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32],
+		texture_size: [width as f32, height as f32],
+	};
+
 	let text_data = text_pipe::Data {
 		vbuf: text_vbuf,
 		image: (texture_view, sampler.clone()),
 		out: main_color.clone(),
+		locals: factory.create_constant_buffer(2),
 	};
+
+	encoder.update_constant_buffer(&text_data.locals, &text_locals);
 
 	while !window.should_close() {
 		handle_update(&mut state);
@@ -381,7 +393,7 @@ fn main() {
 			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * mesh.transform;
 			let locals = Locals {
 				model_view: model_view.into(),
-				projection: projection.into()
+				projection: projection.into(),
 			};
 			encoder.update_constant_buffer(&data.locals, &locals);
 			data.vbuf = mesh.vertex_buffer.clone();
@@ -392,7 +404,7 @@ fn main() {
 			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * plane.transform;
 			let locals = Locals {
 				model_view: model_view.into(),
-				projection: projection.into()
+				projection: projection.into(),
 			};
 			encoder.update_constant_buffer(&data.locals, &locals);
 			data.vbuf = plane.vertex_buffer.clone();
