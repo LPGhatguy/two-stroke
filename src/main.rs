@@ -188,7 +188,7 @@ fn main() {
 	glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(false));
 	glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
-	let (mut window, events) = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Window example", glfw::WindowMode::Windowed)
+	let (mut window, events) = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Two Stroke", glfw::WindowMode::Windowed)
 		.expect("Failed to create GLFW window.");
 
 	window.set_all_polling(true);
