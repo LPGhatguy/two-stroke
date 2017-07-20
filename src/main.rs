@@ -22,6 +22,7 @@ use glfw::{Action, Context, Key};
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use gfx::state::{Rasterizer, RasterMethod, FrontFace, CullFace};
+use gfx::format::Rgba8;
 
 use cgmath::prelude::*;
 use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
@@ -45,6 +46,28 @@ gfx_defines! {
 		out_color: gfx::RenderTarget<ColorFormat> = "Target0",
 		out_depth: gfx::DepthTarget<DepthFormat> = gfx::preset::depth::LESS_EQUAL_WRITE,
 		locals: gfx::ConstantBuffer<Locals> = "Locals",
+	}
+}
+
+gfx_defines! {
+	vertex TextVertex {
+	    pos: [f32; 2] = "a_Pos",
+	    uv: [f32; 2] = "a_Uv",
+	}
+
+	pipeline text_pipe {
+		vbuf: gfx::VertexBuffer<TextVertex> = (),
+		image: gfx::TextureSampler<[f32; 4]> = "t_texture",
+		out: gfx::RenderTarget<ColorFormat> = "Target0",
+	}
+}
+
+impl TextVertex {
+	pub fn new(pos: [f32; 2], uv: [f32; 2]) -> TextVertex {
+		TextVertex {
+			pos,
+			uv
+		}
 	}
 }
 
@@ -184,6 +207,18 @@ fn main() {
 		)
 	};
 
+	let text_shader_set = {
+		use gfx::Factory;
+
+		let vs_code = include_bytes!("shader/text-vertex.glsl");
+		let ps_code = include_bytes!("shader/text-fragment.glsl");
+
+		gfx::ShaderSet::Simple(
+			factory.create_shader_vertex(vs_code).expect("Failed to compile vertex shader"),
+			factory.create_shader_pixel(ps_code).expect("Failed to compile pixel shader"),
+		)
+	};
+
 	let pso = factory.create_pipeline_state(
 		&shader_set,
 		gfx::Primitive::TriangleList,
@@ -208,6 +243,19 @@ fn main() {
 			samples: None,
 		},
 		pipe::new()
+	).unwrap();
+
+	let pso_text = factory.create_pipeline_state(
+		&text_shader_set,
+		gfx::Primitive::TriangleList,
+		Rasterizer {
+			front_face: FrontFace::CounterClockwise,
+			cull_face: CullFace::Nothing,
+			method: RasterMethod::Fill,
+			offset: None,
+			samples: None,
+		},
+		text_pipe::new()
 	).unwrap();
 
 	let mut state = State::new();
@@ -261,30 +309,59 @@ fn main() {
 		}
 	}
 
-	let width = max_x - min_x;
-	let height = max_y - min_y;
+	let width = (max_x - min_x) as usize;
+	let height = (max_y - min_y) as usize;
 
-	let mut texture = Vec::<[u8; 4]>::with_capacity(4);
+	let mut texture = Vec::<u8>::with_capacity(width * height * 4);
 
-	for x in 0..width {
-		for y in 0..height {
-			texture.push([0, 0, 0, 0]);
-		}
+	for x in 0..(width * height) {
+		texture.push(255);
+		texture.push(255);
+		texture.push(255);
+		texture.push(0);
 	}
+
+	println!("({}, {}) to ({}, {})", min_x, min_y, max_x, max_y);
 
 	for glyph in &glyphs {
 		glyph.draw(|x, y, v| {
 			if let Some(bb) = glyph.pixel_bounding_box() {
-				let x = x as i32 + bb.min.x;
-				let y = y as i32 + bb.min.y;
+				let x = (x as i32 + bb.min.x) as usize;
+				let y = (y as i32 + bb.min.y) as usize;
 
-				texture[(y + x * width) as usize] = [0, 0, 0, (v * 255.0) as u8];
+				texture[y * width * 4 + x * 4 + 3] = (v * 255.0) as u8;
 			}
 		});
 	}
 
-	println!("({}, {}) to ({}, {})", min_x, min_y, max_x, max_y);
-	println!("{:?}", texture);
+	println!("({}, {})", width, height);
+
+	let texture_view = {
+		use gfx::Factory;
+
+		let kind = gfx::texture::Kind::D2(width as u16, height as u16, gfx::texture::AaMode::Single);
+		let (_, view) = factory.create_texture_immutable_u8::<Rgba8>(kind, &[texture.as_slice()]).unwrap();
+
+		view
+	};
+	let sampler = factory.create_sampler_linear();
+
+	let text_vertices = [
+		TextVertex::new([-1.0, -1.0], [0.0, 1.0]),
+		TextVertex::new([ 1.0, -1.0], [1.0, 1.0]),
+		TextVertex::new([ 1.0,  1.0], [1.0, 0.0]),
+
+		TextVertex::new([-1.0, -1.0], [0.0, 1.0]),
+		TextVertex::new([ 1.0,  1.0], [1.0, 0.0]),
+		TextVertex::new([-1.0,  1.0], [0.0, 0.0]),
+	];
+	let (text_vbuf, text_slice) = factory.create_vertex_buffer_with_slice(&text_vertices, ());
+
+	let text_data = text_pipe::Data {
+		vbuf: text_vbuf,
+		image: (texture_view, sampler.clone()),
+		out: main_color.clone(),
+	};
 
 	while !window.should_close() {
 		handle_update(&mut state);
