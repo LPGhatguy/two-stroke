@@ -289,7 +289,7 @@ fn main() {
 	let collection = FontCollection::from_bytes(font_data as &[u8]);
 	let font = collection.into_font().unwrap();
 
-	let text_height: f32 = 16.0;
+	let text_height: f32 = 32.0;
 
 	let scale = rusttype::Scale {
 		x: text_height,
