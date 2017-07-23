@@ -8,7 +8,10 @@ cgmath = "*"
 time = "*"
 glfw = "0.15.0"
 rusttype = "0.2.1"
+gfx = "0.16.1"
+gfx_device_gl = "0.14.1"
+gfx_window_glfw = "0.15.0"
 
-gfx = { path = "../gfx/src/render" }
-gfx_device_gl = { path = "../gfx/src/backend/gl" }
-gfx_window_glfw = { path = "../gfx/src/window/glfw" }
+# gfx = { path = "../gfx/src/render" }
+# gfx_device_gl = { path = "../gfx/src/backend/gl" }
+# gfx_window_glfw = { path = "../gfx/src/window/glfw" }
