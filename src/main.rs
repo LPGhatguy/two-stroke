@@ -12,9 +12,9 @@ mod vertex;
 mod mesh;
 mod state;
 mod text;
+mod texture;
 
 use std::f32::consts::PI;
-use std::cmp;
 
 use time::precise_time_s;
 
@@ -288,53 +288,13 @@ fn main() {
 	let font_data = include_bytes!("font/Roboto-Light.ttf");
 	let font = Font::from_bytes(font_data as &[u8]).unwrap();
 
-	let glyphs = font.layout("Hello, world!", 32.0);
-
-	let mut min_x = 0;
-	let mut min_y = 0;
-	let mut max_x = 0;
-	let mut max_y = 0;
-
-	for glyph in &glyphs {
-		if let Some(bb) = glyph.pixel_bounding_box() {
-			min_x = cmp::min(min_x, bb.min.x);
-			min_y = cmp::min(min_y, bb.min.y);
-			max_x = cmp::max(max_x, bb.max.x);
-			max_y = cmp::max(max_y, bb.max.y);
-		}
-	}
-
-	let width = (max_x - min_x) as usize;
-	let height = (max_y - min_y) as usize;
-
-	let mut texture = Vec::<u8>::with_capacity(width * height * 4);
-
-	for _ in 0..(width * height) {
-		texture.push(0);
-		texture.push(0);
-		texture.push(0);
-		texture.push(0);
-	}
-
-	for glyph in &glyphs {
-		if let Some(bb) = glyph.pixel_bounding_box() {
-			glyph.draw(|x, y, v| {
-				let x = (x as i32 + bb.min.x) as usize;
-				let y = (y as i32 + bb.min.y) as usize;
-
-				texture[y * (width * 4) + x * 4 + 0] = 255;
-				texture[y * (width * 4) + x * 4 + 1] = 255;
-				texture[y * (width * 4) + x * 4 + 2] = 255;
-				texture[y * (width * 4) + x * 4 + 3] = (v * 255.0) as u8;
-			});
-		}
-	}
+	let text_texture = font.render("Hello, world!", 32.0);
 
 	let texture_view = {
 		use gfx::Factory;
 
-		let kind = gfx::texture::Kind::D2(width as u16, height as u16, gfx::texture::AaMode::Single);
-		let (_, view) = factory.create_texture_immutable_u8::<Rgba8>(kind, &[texture.as_slice()]).unwrap();
+		let kind = gfx::texture::Kind::D2(text_texture.width as u16, text_texture.height as u16, gfx::texture::AaMode::Single);
+		let (_, view) = factory.create_texture_immutable_u8::<Rgba8>(kind, &[text_texture.data.as_slice()]).unwrap();
 
 		view
 	};
@@ -353,7 +313,7 @@ fn main() {
 
 	let text_locals = TextLocals {
 		screen_size: [WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32],
-		texture_size: [width as f32, height as f32],
+		texture_size: [text_texture.width as f32, text_texture.height as f32],
 	};
 
 	let text_data = text_pipe::Data {
