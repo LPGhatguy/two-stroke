@@ -11,6 +11,7 @@ mod gfx_types;
 mod vertex;
 mod mesh;
 mod state;
+mod text;
 
 use std::f32::consts::PI;
 use std::cmp;
@@ -27,10 +28,9 @@ use gfx::format::Rgba8;
 use cgmath::prelude::*;
 use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
 
-use rusttype::{FontCollection, PositionedGlyph};
-
 use state::State;
 use mesh::Mesh;
+use text::Font;
 
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
@@ -286,20 +286,9 @@ fn main() {
 	};
 
 	let font_data = include_bytes!("font/Roboto-Light.ttf");
-	let collection = FontCollection::from_bytes(font_data as &[u8]);
-	let font = collection.into_font().unwrap();
+	let font = Font::from_bytes(font_data as &[u8]).unwrap();
 
-	let text_height: f32 = 32.0;
-
-	let scale = rusttype::Scale {
-		x: text_height,
-		y: text_height,
-	};
-
-	let v_metrics = font.v_metrics(scale);
-	let offset = rusttype::point(0.0, v_metrics.ascent);
-
-	let glyphs: Vec<PositionedGlyph> = font.layout("[Hello, world!] |||", scale, offset).collect();
+	let glyphs = font.layout("Hello, world!", 32.0);
 
 	let mut min_x = 0;
 	let mut min_y = 0;
