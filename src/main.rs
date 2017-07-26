@@ -362,28 +362,6 @@ fn main() {
 			encoder.draw(&mesh.slice, use_pso, &data);
 		}
 
-		// {
-		// 	let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * mesh.transform;
-		// 	let locals = Locals {
-		// 		model_view: model_view.into(),
-		// 		projection: projection.into(),
-		// 	};
-		// 	encoder.update_constant_buffer(&data.locals, &locals);
-		// 	data.vbuf = mesh.vertex_buffer.clone();
-		// 	encoder.draw(&mesh.slice, &pso, &data);
-		// }
-
-		// {
-		// 	let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * plane.transform;
-		// 	let locals = Locals {
-		// 		model_view: model_view.into(),
-		// 		projection: projection.into(),
-		// 	};
-		// 	encoder.update_constant_buffer(&data.locals, &locals);
-		// 	data.vbuf = plane.vertex_buffer.clone();
-		// 	encoder.draw(&plane.slice, &pso_lines, &data);
-		// }
-
 		{
 			encoder.draw(&text_slice, &pso_text, &text_data);
 		}
