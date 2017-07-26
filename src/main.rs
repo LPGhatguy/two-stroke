@@ -13,8 +13,12 @@ mod mesh;
 mod state;
 mod text;
 mod texture;
+mod obj_loader;
 
 use std::f32::consts::PI;
+use std::env;
+use std::io::BufReader;
+use std::fs::File;
 
 use time::precise_time_s;
 
@@ -31,6 +35,7 @@ use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
 use state::State;
 use mesh::{Mesh, DrawStyle};
 use text::Font;
+use obj_loader::ObjStream;
 
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
@@ -180,7 +185,23 @@ fn handle_update(state: &mut State) {
 	}
 }
 
+fn load_mesh(name: &str) {
+	let mut test_obj_path = env::current_dir().unwrap();
+	test_obj_path.push("assets");
+	test_obj_path.push(name);
+
+	let file = File::open(test_obj_path).unwrap();
+	let mut reader = BufReader::new(&file);
+	let mut obj_stream = ObjStream::new(&mut reader);
+
+	for vertex in &mut obj_stream {
+		println!("{:?}", vertex);
+	}
+}
+
 fn main() {
+	load_mesh("test.obj");
+
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)
 		.ok()
 		.expect("Failed to initialize GLFW");
