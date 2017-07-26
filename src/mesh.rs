@@ -7,10 +7,17 @@ use cgmath::{One, Matrix4};
 
 use gfx_types::{Resources, Factory};
 
+pub enum DrawStyle {
+	Solid,
+	Lines,
+}
+
 pub struct Mesh {
 	pub vertex_buffer: gfx::handle::Buffer<Resources, Vertex>,
 	pub slice: gfx::Slice<Resources>,
 	pub transform: Matrix4<f32>,
+	pub style: DrawStyle,
+	pub color: [f32; 3],
 }
 
 impl Mesh {
@@ -22,6 +29,8 @@ impl Mesh {
 			vertex_buffer: vertex_buffer,
 			slice: slice,
 			transform: Matrix4::one(),
+			style: DrawStyle::Solid,
+			color: [1.0, 1.0, 1.0],
 		}
 	}
 
@@ -35,7 +44,7 @@ impl Mesh {
 					x as f32 - (size as f32 / 2.0),
 					0.0,
 					z as f32 - (size as f32 / 2.0)
-				))
+				));
 			}
 		}
 
@@ -59,7 +68,7 @@ impl Mesh {
 	pub fn cube(factory: &mut Factory) -> Mesh {
 		let vertices = vec![
 			// Front face
-			Vertex::new_color(0.5, -0.5, 0.5, 0.25),
+			Vertex::new(0.5, -0.5, 0.5),
 			Vertex::new(-0.5, -0.5, 0.5),
 			Vertex::new(-0.5, 0.5, 0.5),
 			Vertex::new(0.5, 0.5, 0.5),
@@ -67,7 +76,7 @@ impl Mesh {
 			// Back face
 			Vertex::new(-0.5, 0.5, -0.5),
 			Vertex::new(0.5, 0.5, -0.5),
-			Vertex::new_color(0.5, -0.5, -0.5, 1.0),
+			Vertex::new(0.5, -0.5, -0.5),
 			Vertex::new(-0.5, -0.5, -0.5),
 		];
 

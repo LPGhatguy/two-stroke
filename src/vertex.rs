@@ -7,10 +7,6 @@ gfx_vertex_struct! {
 
 impl Vertex {
 	pub fn new(x: f32, y: f32, z: f32) -> Vertex {
-		Vertex { position: [x, y, z], color: [0.0, 0.2, 0.8] }
-	}
-
-	pub fn new_color(x: f32, y: f32, z: f32, g: f32) -> Vertex {
-		Vertex { position: [x, y, z], color: [g, g, g] }
+		Vertex { position: [x, y, z], color: [1.0, 1.0, 1.0] }
 	}
 }

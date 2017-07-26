@@ -29,7 +29,7 @@ use cgmath::prelude::*;
 use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
 
 use state::State;
-use mesh::Mesh;
+use mesh::{Mesh, DrawStyle};
 use text::Font;
 
 pub type ColorFormat = gfx::format::Rgba8;
@@ -42,6 +42,7 @@ gfx_defines! {
 	constant Locals {
 		model_view: [[f32; 4]; 4] = "u_ModelView",
 		projection: [[f32; 4]; 4] = "u_Projection",
+		color: [f32; 3] = "u_Color",
 	}
 
 	pipeline pipe {
@@ -166,7 +167,7 @@ fn handle_update(state: &mut State) {
 	if !mouse_delta.is_zero() {
 		let turn_rate = 0.3;
 		let pitch = state.player.camera_pitch + (mouse_delta.y as f32) * delta * turn_rate;
-		let pitch = clamp(pitch, -PI / 3.0, PI / 3.0);
+		let pitch = clamp(pitch, -PI / 2.2, PI / 2.2);
 
 		state.player.camera_pitch = pitch;
 		state.player.camera_yaw += (mouse_delta.x as f32) * delta * turn_rate;
@@ -271,9 +272,11 @@ fn main() {
 	state.player.camera_position = Vector3::new(0.0, 0.0, 0.0);
 
 	let mut plane = Mesh::plane(&mut factory, 16);
+	plane.style = DrawStyle::Lines;
 	plane.transform = Matrix4::from_translation(Vector3::new(0.0, -1.0, 0.0));
 
 	let mut mesh = Mesh::cube(&mut factory);
+	mesh.color = [0.25, 0.25, 0.4];
 	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 2.0));
 
 	let projection = cgmath::perspective(Deg(60.0f32), (WINDOW_WIDTH as f32) / (WINDOW_HEIGHT as f32), 0.05, 100.0);
@@ -295,6 +298,8 @@ fn main() {
 
 		let kind = gfx::texture::Kind::D2(text_texture.width as u16, text_texture.height as u16, gfx::texture::AaMode::Single);
 		let (_, view) = factory.create_texture_immutable_u8::<Rgba8>(kind, &[text_texture.data.as_slice()]).unwrap();
+
+		// TODO: convert to create_texture?
 
 		view
 	};
@@ -325,6 +330,9 @@ fn main() {
 
 	encoder.update_constant_buffer(&text_data.locals, &text_locals);
 
+	state.meshes.push(mesh);
+	state.meshes.push(plane);
+
 	while !window.should_close() {
 		handle_update(&mut state);
 
@@ -337,27 +345,44 @@ fn main() {
 		encoder.clear(&main_color, CLEAR_COLOR);
 		encoder.clear_depth(&main_depth, 1.0);
 
-		{
+		for mesh in &state.meshes {
 			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * mesh.transform;
 			let locals = Locals {
 				model_view: model_view.into(),
 				projection: projection.into(),
+				color: mesh.color,
 			};
 			encoder.update_constant_buffer(&data.locals, &locals);
 			data.vbuf = mesh.vertex_buffer.clone();
-			encoder.draw(&mesh.slice, &pso, &data);
+
+			let use_pso = match mesh.style {
+				DrawStyle::Solid => &pso,
+				DrawStyle::Lines => &pso_lines,
+			};
+			encoder.draw(&mesh.slice, use_pso, &data);
 		}
 
-		{
-			let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * plane.transform;
-			let locals = Locals {
-				model_view: model_view.into(),
-				projection: projection.into(),
-			};
-			encoder.update_constant_buffer(&data.locals, &locals);
-			data.vbuf = plane.vertex_buffer.clone();
-			encoder.draw(&plane.slice, &pso_lines, &data);
-		}
+		// {
+		// 	let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * mesh.transform;
+		// 	let locals = Locals {
+		// 		model_view: model_view.into(),
+		// 		projection: projection.into(),
+		// 	};
+		// 	encoder.update_constant_buffer(&data.locals, &locals);
+		// 	data.vbuf = mesh.vertex_buffer.clone();
+		// 	encoder.draw(&mesh.slice, &pso, &data);
+		// }
+
+		// {
+		// 	let model_view = Matrix4::from(state.player.camera_orientation) * Matrix4::from_translation(-state.player.camera_position) * plane.transform;
+		// 	let locals = Locals {
+		// 		model_view: model_view.into(),
+		// 		projection: projection.into(),
+		// 	};
+		// 	encoder.update_constant_buffer(&data.locals, &locals);
+		// 	data.vbuf = plane.vertex_buffer.clone();
+		// 	encoder.draw(&plane.slice, &pso_lines, &data);
+		// }
 
 		{
 			encoder.draw(&text_slice, &pso_text, &text_data);
