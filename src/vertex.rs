@@ -9,4 +9,8 @@ impl Vertex {
 	pub fn new(x: f32, y: f32, z: f32) -> Vertex {
 		Vertex { position: [x, y, z], color: [1.0, 1.0, 1.0] }
 	}
+
+	pub fn from_position(position: [f32; 3]) -> Vertex {
+		Vertex { position, color: [1.0, 1.0, 1.0] }
+	}
 }

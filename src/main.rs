@@ -35,7 +35,8 @@ use cgmath::{Quaternion, Vector2, Vector3, Matrix4, Deg, Rad, Euler};
 use state::State;
 use mesh::{Mesh, DrawStyle};
 use text::Font;
-use obj_loader::ObjStream;
+use obj_loader::{ObjStream, ObjItem};
+use vertex::Vertex;
 
 pub type ColorFormat = gfx::format::Rgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
@@ -185,7 +186,7 @@ fn handle_update(state: &mut State) {
 	}
 }
 
-fn load_mesh(name: &str) {
+fn load_mesh(factory: &mut gfx_types::Factory, name: &str) -> Mesh {
 	let mut test_obj_path = env::current_dir().unwrap();
 	test_obj_path.push("assets");
 	test_obj_path.push(name);
@@ -194,14 +195,27 @@ fn load_mesh(name: &str) {
 	let mut reader = BufReader::new(&file);
 	let mut obj_stream = ObjStream::new(&mut reader);
 
-	for vertex in &mut obj_stream {
-		println!("{:?}", vertex);
+	let mut vertices: Vec<Vertex> = Vec::new();
+	let mut elements: Vec<u32> = Vec::new();
+
+	for item in &mut obj_stream {
+		match item {
+			ObjItem::Vertex(position) => {
+				vertices.push(Vertex::from_position(position));
+			},
+			ObjItem::Triangle(indices) => {
+				elements.push(indices[0]);
+				elements.push(indices[1]);
+				elements.push(indices[2]);
+			},
+			_ => {},
+		}
 	}
+
+	Mesh::new(factory, &vertices, &elements)
 }
 
 fn main() {
-	load_mesh("test.obj");
-
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)
 		.ok()
 		.expect("Failed to initialize GLFW");
@@ -300,6 +314,9 @@ fn main() {
 	mesh.color = [0.25, 0.25, 0.4];
 	mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, 2.0));
 
+	let mut loaded_mesh = load_mesh(&mut factory, "monkey.obj");
+	loaded_mesh.transform = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
+
 	let projection = cgmath::perspective(Deg(60.0f32), (WINDOW_WIDTH as f32) / (WINDOW_HEIGHT as f32), 0.05, 100.0);
 
 	let mut data = pipe::Data {
@@ -353,6 +370,7 @@ fn main() {
 
 	state.meshes.push(mesh);
 	state.meshes.push(plane);
+	state.meshes.push(loaded_mesh);
 
 	while !window.should_close() {
 		handle_update(&mut state);

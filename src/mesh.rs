@@ -21,7 +21,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-	pub fn new(factory: &mut Factory, vertices: &Vec<Vertex>, elements: &Vec<u16>) -> Mesh {
+	pub fn new(factory: &mut Factory, vertices: &Vec<Vertex>, elements: &Vec<u32>) -> Mesh {
 		let index_buffer = elements.into_index_buffer(factory);
 		let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(vertices.as_slice(), index_buffer);
 
@@ -36,7 +36,7 @@ impl Mesh {
 
 	pub fn plane(factory: &mut Factory, size: usize) -> Mesh {
 		let mut vertices = Vec::<Vertex>::with_capacity((size + 1) * (size + 1));
-		let mut indices = Vec::<u16>::with_capacity(6 * size * size);
+		let mut indices = Vec::<u32>::with_capacity(6 * size * size);
 
 		for z in 0..(size + 1) {
 			for x in 0..(size + 1) {
@@ -52,13 +52,13 @@ impl Mesh {
 			for y in 0..size {
 				let n = x + y * (size + 1);
 
-				indices.push((n) as u16);
-				indices.push((n + size + 2) as u16);
-				indices.push((n + 1) as u16);
+				indices.push((n) as u32);
+				indices.push((n + size + 2) as u32);
+				indices.push((n + 1) as u32);
 
-				indices.push((n) as u16);
-				indices.push((n + size + 1) as u16);
-				indices.push((n + size + 2) as u16);
+				indices.push((n) as u32);
+				indices.push((n + size + 1) as u32);
+				indices.push((n + size + 2) as u32);
 			}
 		}
 
@@ -80,7 +80,7 @@ impl Mesh {
 			Vertex::new(-0.5, -0.5, -0.5),
 		];
 
-		let indices: Vec<u16> = vec![
+		let indices: Vec<u32> = vec![
 			// Front face
 			0, 2, 1,
 			0, 3, 2,
